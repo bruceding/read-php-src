@@ -1810,6 +1810,8 @@ int main(int argc, char *argv[])
 #endif
 
 	sapi_startup(&cgi_sapi_module);
+    // 判断是否是fastcgi 
+    // fastcgi有socket链接
 	fastcgi = fcgi_is_fastcgi();
 	cgi_sapi_module.php_ini_path_override = NULL;
 

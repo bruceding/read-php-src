@@ -433,6 +433,7 @@ SAPI_API void sapi_activate_headers_only(void)
 
 /*
  * Called from php_request_startup() for every request.
+ * 请求激活，每次请求都会被调用
  */
 
 SAPI_API void sapi_activate(void)
@@ -457,6 +458,7 @@ SAPI_API void sapi_activate(void)
 	SG(global_request_time) = 0;
 	SG(post_read) = 0;
 	/* It's possible to override this general case in the activate() callback, if necessary. */
+    // 请求方法是不是HEAD
 	if (SG(request_info).request_method && !strcmp(SG(request_info).request_method, "HEAD")) {
 		SG(request_info).headers_only = 1;
 	} else {
@@ -478,6 +480,7 @@ SAPI_API void sapi_activate(void)
 		}
 
 		/* Cookies */
+        // 获取cookie数值
 		SG(request_info).cookie_data = sapi_module.read_cookies();
 	}
 	if (sapi_module.activate) {

@@ -2084,7 +2084,12 @@ int php_module_startup(sapi_module_struct *sf, zend_module_entry *additional_mod
 
 	module_shutdown = 0;
 	module_startup = 1;
+
+    // 初始化请求
+    // SG结构赋值
 	sapi_initialize_empty_request();
+
+    // 激活请求
 	sapi_activate();
 
 	if (module_initialized) {
@@ -2106,6 +2111,7 @@ int php_module_startup(sapi_module_struct *sf, zend_module_entry *additional_mod
 #endif
 	gc_globals_ctor();
 
+    // 设置常用函数
 	zuf.error_function = php_error_cb;
 	zuf.printf_function = php_printf;
 	zuf.write_function = php_output_wrapper;
@@ -2119,6 +2125,7 @@ int php_module_startup(sapi_module_struct *sf, zend_module_entry *additional_mod
 	zuf.vstrpprintf_function = vstrpprintf;
 	zuf.getenv_function = sapi_getenv;
 	zuf.resolve_path_function = php_resolve_path_for_zend;
+
 	zend_startup(&zuf, NULL);
 
 #if HAVE_SETLOCALE

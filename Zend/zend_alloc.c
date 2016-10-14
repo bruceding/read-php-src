@@ -1797,7 +1797,7 @@ static zend_mm_heap *zend_mm_init(void)
 	chunk->heap = heap;
 	chunk->next = chunk;
 	chunk->prev = chunk;
-	chunk->free_pages = ZEND_MM_PAGES - ZEND_MM_FIRST_PAGE;
+	chunk->free_pages = ZEND_MM_PAGES - ZEND_MM_FIRST_PAGE; // 511 = 512 -1, 第一个page是信息
 	chunk->free_tail = ZEND_MM_FIRST_PAGE;
 	chunk->num = 0;
 	chunk->free_map[0] = (Z_L(1) << ZEND_MM_FIRST_PAGE) - 1;
@@ -2612,6 +2612,7 @@ static void alloc_globals_dtor(zend_alloc_globals *alloc_globals)
 }
 #endif
 
+// 开启内存管理
 ZEND_API void start_memory_manager(void)
 {
 #ifdef ZTS
