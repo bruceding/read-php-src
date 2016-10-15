@@ -751,6 +751,7 @@ int fcgi_listen(const char *path, int backlog)
 	}
 
 	/* Create, bind socket and start listen on it */
+    // 创建socket链接并监听，等待请求
 	if ((listen_socket = socket(sa.sa.sa_family, SOCK_STREAM, 0)) < 0 ||
 #ifdef SO_REUSEADDR
 	    setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, (char*)&reuse, sizeof(reuse)) < 0 ||
@@ -770,7 +771,7 @@ int fcgi_listen(const char *path, int backlog)
 		int n;
 
 		if (ip) {
-			ip = strdup(ip);
+			ip = strdup(ip); // 复制自己，不污染环境变量
 			cur = ip;
 			n = 0;
 			while (*cur) {

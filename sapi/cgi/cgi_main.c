@@ -1416,7 +1416,6 @@ static void init_request_info(fcgi_request *request)
 }
 /* }}} */
 
-#ifndef PHP_WIN32
 /**
  * Clean up child processes upon exit
  */
@@ -1437,30 +1436,6 @@ void fastcgi_cleanup(int signal)
 		exit(0);
 	}
 }
-#else
-BOOL WINAPI fastcgi_cleanup(DWORD sig)
-{
-	int i = kids;
-
-	while (0 < i--) {
-		if (NULL == kid_cgi_ps[i]) {
-				continue;
-		}
-
-		TerminateProcess(kid_cgi_ps[i], 0);
-		CloseHandle(kid_cgi_ps[i]);
-		kid_cgi_ps[i] = NULL;
-	}
-
-	if (job) {
-		CloseHandle(job);
-	}
-
-	parent = 0;
-
-	return TRUE;
-}
-#endif
 
 PHP_INI_BEGIN()
 	STD_PHP_INI_ENTRY("cgi.rfc2616_headers",     "0",  PHP_INI_ALL,    OnUpdateBool,   rfc2616_headers, php_cgi_globals_struct, php_cgi_globals)
@@ -2006,6 +1981,7 @@ consult the installation file that came with this distribution, or visit \n\
 		php_import_environment_variables = cgi_php_import_environment_variables;
 
 		/* library is already initialized, now init our request */
+        // 初始化单个请求
 		request = fcgi_init_request(fcgi_fd, NULL, NULL, NULL);
 
 		/* Pre-fork or spawn, if required */
@@ -2024,7 +2000,6 @@ consult the installation file that came with this distribution, or visit \n\
 			fcgi_set_mgmt_var("FCGI_MAX_REQS",  sizeof("FCGI_MAX_REQS")-1,  "1", sizeof("1")-1);
 		}
 
-#ifndef PHP_WIN32
 		if (children) {
 			int running = 0;
 			pid_t pid;
@@ -2037,6 +2012,8 @@ consult the installation file that came with this distribution, or visit \n\
 #endif
 
 			/* Set up handler to kill children upon exit */
+            // 设置handler 父进程退出时，kill所有子进程
+	        // kill(-pgroup, SIGTERM); 所有进程组的
 			act.sa_flags = 0;
 			act.sa_handler = fastcgi_cleanup;
 			if (sigaction(SIGTERM, &act, &old_term) ||
@@ -2051,11 +2028,14 @@ consult the installation file that came with this distribution, or visit \n\
 				goto parent_out;
 			}
 
+            // 父进程在这里一直循环，生成子进程，监听子进程，一旦子进程有退出，则会重复执行，再次生成子进程
+            // 一直保持固定数量的子进程
 			while (parent) {
 				do {
 #ifdef DEBUG_FASTCGI
 					fprintf(stderr, "Forking, %d running\n", running);
 #endif
+                    // 生成子进程
 					pid = fork();
 					switch (pid) {
 					case 0:
@@ -2082,6 +2062,7 @@ consult the installation file that came with this distribution, or visit \n\
 					}
 				} while (parent && (running < children));
 
+                // 父进程处理
 				if (parent) {
 #ifdef DEBUG_FASTCGI
 					fprintf(stderr, "Wait for kids, pid %d\n", getpid());
@@ -2106,110 +2087,14 @@ consult the installation file that came with this distribution, or visit \n\
 						goto parent_out;
 					}
 				}
+                // 父进程处理结束
 			}
 		} else {
+            // 不预先生成子进程，parent = 0 ?
 			parent = 0;
 			zend_signal_init();
 		}
 
-#else
-		if (children) {
-			char *cmd_line;
-			char kid_buf[16];
-			char my_name[MAX_PATH] = {0};
-			int i;
-
-			ZeroMemory(&kid_cgi_ps, sizeof(kid_cgi_ps));
-			kids = children < WIN32_MAX_SPAWN_CHILDREN ? children : WIN32_MAX_SPAWN_CHILDREN; 
-			
-			SetConsoleCtrlHandler(fastcgi_cleanup, TRUE);
-
-			/* kids will inherit the env, don't let them spawn */
-			SetEnvironmentVariable("PHP_FCGI_CHILDREN", NULL);
-
-			GetModuleFileName(NULL, my_name, MAX_PATH);
-			cmd_line = my_name;
-
-			job = CreateJobObject(NULL, NULL);
-			if (!job) {
-				DWORD err = GetLastError();
-				char *err_text = php_win32_error_to_msg(err);
-
-				fprintf(stderr, "unable to create job object: [0x%08lx]: %s\n", err, err_text);
-
-				goto parent_out;
-			}
-
-			job_info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-			if (!SetInformationJobObject(job, JobObjectExtendedLimitInformation, &job_info, sizeof(job_info))) {
-				DWORD err = GetLastError();
-				char *err_text = php_win32_error_to_msg(err);
-
-				fprintf(stderr, "unable to configure job object: [0x%08lx]: %s\n", err, err_text);
-			}
-
-			while (parent) {
-				i = kids;
-				while (0 < i--) {
-					DWORD status;
-
-					if (NULL != kid_cgi_ps[i]) {
-						if(!GetExitCodeProcess(kid_cgi_ps[i], &status) || status != STILL_ACTIVE) {
-							CloseHandle(kid_cgi_ps[i]);
-							kid_cgi_ps[i] = NULL;
-						}
-					}
-				}
-
-				i = kids;
-				while (0 < i--) {
-					PROCESS_INFORMATION pi;
-					STARTUPINFO si;
-
-					if (NULL != kid_cgi_ps[i]) {
-						continue;
-					}
-
-					ZeroMemory(&si, sizeof(si));
-					si.cb = sizeof(si);
-					ZeroMemory(&pi, sizeof(pi));
-
-					si.dwFlags = STARTF_USESTDHANDLES;
-					si.hStdOutput = INVALID_HANDLE_VALUE;
-					si.hStdInput  = (HANDLE)_get_osfhandle(fcgi_fd);
-					si.hStdError  = INVALID_HANDLE_VALUE;
-
-					if (CreateProcess(NULL, cmd_line, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
-						kid_cgi_ps[i] = pi.hProcess;
-						if (!AssignProcessToJobObject(job, pi.hProcess)) {
-							DWORD err = GetLastError();
-							char *err_text = php_win32_error_to_msg(err);
-
-							fprintf(stderr, "unable to assign child process to job object: [0x%08lx]: %s\n", err, err_text);
-						}
-						CloseHandle(pi.hThread);
-					} else {
-						DWORD err = GetLastError();
-						char *err_text = php_win32_error_to_msg(err);
-
-						kid_cgi_ps[i] = NULL;
-
-						fprintf(stderr, "unable to spawn: [0x%08lx]: %s\n", err, err_text);
-					}
-				}
-				
-				WaitForMultipleObjects(kids, kid_cgi_ps, FALSE, INFINITE);
-			}
-			
-			snprintf(kid_buf, 16, "%d", children);
-			/* restore my env */
-			SetEnvironmentVariable("PHP_FCGI_CHILDREN", kid_buf);
-
-			goto parent_out;
-		} else {
-			parent = 0;
-		}
-#endif /* WIN32 */
 	}
 
 	zend_first_try {
@@ -2251,13 +2136,7 @@ consult the installation file that came with this distribution, or visit \n\
 
 		/* start of FAST CGI loop */
 		/* Initialise FastCGI request structure */
-#ifdef PHP_WIN32
-		/* attempt to set security impersonation for fastcgi
-		 * will only happen on NT based OS, others will ignore it. */
-		if (fastcgi && CGIG(impersonate)) {
-			fcgi_impersonate();
-		}
-#endif
+        // TODO
 		while (!fastcgi || fcgi_accept_request(request) >= 0) {
 			SG(server_context) = fastcgi ? (void *)request : (void *) 1;
 			init_request_info(request);
