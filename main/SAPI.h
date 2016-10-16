@@ -76,10 +76,10 @@ END_EXTERN_C()
  * so make sure that you allocate a separate buffer for them
  * and that you free them after sapi_deactivate().
  */
-
+// 每个具体请求结构
 typedef struct {
-	const char *request_method;
-	char *query_string;
+	const char *request_method; // 请求方法
+	char *query_string; 
 	char *cookie_data;
 	zend_long content_length;
 

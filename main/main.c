@@ -1606,13 +1606,6 @@ int php_request_startup(void)
 	DTRACE_REQUEST_STARTUP(SAFE_FILENAME(SG(request_info).path_translated), SAFE_FILENAME(SG(request_info).request_uri), (char *)SAFE_FILENAME(SG(request_info).request_method));
 #endif /* HAVE_DTRACE */
 
-#ifdef PHP_WIN32
-# if defined(ZTS)
-	_configthreadlocale(_ENABLE_PER_THREAD_LOCALE);
-# endif
-	PG(com_initialized) = 0;
-#endif
-
 #if PHP_SIGCHILD
 	signal(SIGCHLD, sigchld_handler);
 #endif
@@ -1899,13 +1892,6 @@ void php_request_shutdown(void *dummy)
 	zend_try {
 		zend_unset_timeout();
 	} zend_end_try();
-
-#ifdef PHP_WIN32
-	if (PG(com_initialized)) {
-		CoUninitialize();
-		PG(com_initialized) = 0;
-	}
-#endif
 
 #ifdef HAVE_DTRACE
 	DTRACE_REQUEST_SHUTDOWN(SAFE_FILENAME(SG(request_info).path_translated), SAFE_FILENAME(SG(request_info).request_uri), (char *)SAFE_FILENAME(SG(request_info).request_method));

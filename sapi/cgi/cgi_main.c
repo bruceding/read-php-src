@@ -171,9 +171,6 @@ typedef struct _php_cgi_globals_struct {
 	zend_bool force_redirect;
 	zend_bool discard_path;
 	zend_bool fcgi_logging;
-#ifdef PHP_WIN32
-	zend_bool impersonate;
-#endif
 } php_cgi_globals_struct;
 
 /* {{{ user_config_cache
@@ -1155,25 +1152,6 @@ static void init_request_info(fcgi_request *request)
 		char *env_path_info = CGI_GETENV("PATH_INFO");
 		char *env_script_name = CGI_GETENV("SCRIPT_NAME");
 
-#ifdef PHP_WIN32
-		/* Hack for buggy IIS that sets incorrect PATH_INFO */
-		char *env_server_software = CGI_GETENV("SERVER_SOFTWARE");
-
-		if (env_server_software &&
-			env_script_name &&
-			env_path_info &&
-			strncmp(env_server_software, "Microsoft-IIS", sizeof("Microsoft-IIS")-1) == 0 &&
-			strncmp(env_path_info, env_script_name, strlen(env_script_name)) == 0
-		) {
-			env_path_info = CGI_PUTENV("ORIG_PATH_INFO", env_path_info);
-			env_path_info += strlen(env_script_name);
-			if (*env_path_info == 0) {
-				env_path_info = NULL;
-			}
-			env_path_info = CGI_PUTENV("PATH_INFO", env_path_info);
-		}
-#endif
-
 		if (CGIG(fix_pathinfo)) {
 			zend_stat_t st;
 			char *real_path = NULL;
@@ -1218,9 +1196,6 @@ static void init_request_info(fcgi_request *request)
 			if (script_path_translated &&
 				(script_path_translated_len = strlen(script_path_translated)) > 0 &&
 				(script_path_translated[script_path_translated_len-1] == '/' ||
-#ifdef PHP_WIN32
-				script_path_translated[script_path_translated_len-1] == '\\' ||
-#endif
 				(real_path = tsrm_realpath(script_path_translated, NULL)) == NULL)
 			) {
 				char *pt = estrndup(script_path_translated, script_path_translated_len);
@@ -2136,9 +2111,12 @@ consult the installation file that came with this distribution, or visit \n\
 
 		/* start of FAST CGI loop */
 		/* Initialise FastCGI request structure */
-        // TODO
+        // 这里实际是个循环，不停接受请求
 		while (!fastcgi || fcgi_accept_request(request) >= 0) {
 			SG(server_context) = fastcgi ? (void *)request : (void *) 1;
+
+            //初始化请求 
+            // 把fcgi_request 数据赋值给SG，定义处理脚本，接下来执行php操作
 			init_request_info(request);
 
 			if (!cgi && !fastcgi) {
@@ -2322,6 +2300,7 @@ consult the installation file that came with this distribution, or visit \n\
 
 			/* request startup only after we've done all we can to
 			 * get path_translated */
+            // 执行php处理请求
 			if (php_request_startup() == FAILURE) {
 				if (fastcgi) {
 					fcgi_finish_request(request, 1);
@@ -2356,6 +2335,7 @@ consult the installation file that came with this distribution, or visit \n\
 					 * so cleanup and continue, request shutdown is
 					 * handled later */
 					if (fastcgi) {
+                        // 出错逻辑才走这
 						goto fastcgi_request_done;
 					}
 
@@ -2457,6 +2437,7 @@ consult the installation file that came with this distribution, or visit \n\
 
 			switch (behavior) {
 				case PHP_MODE_STANDARD:
+                    // 执行脚本
 					php_execute_script(&file_handle);
 					break;
 				case PHP_MODE_LINT:
@@ -2501,6 +2482,8 @@ fastcgi_request_done:
 					SG(request_info).path_translated = NULL;
 				}
 
+                // 清理请求
+                // 释放资源
 				php_request_shutdown((void *) 0);
 
 				if (exit_status == 0) {
@@ -2599,10 +2582,6 @@ parent_out:
 
 #ifdef ZTS
 	tsrm_shutdown();
-#endif
-
-#if defined(PHP_WIN32) && ZEND_DEBUG && 0
-	_CrtDumpMemoryLeaks();
 #endif
 
 	return exit_status;

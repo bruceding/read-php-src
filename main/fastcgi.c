@@ -899,10 +899,6 @@ fcgi_request *fcgi_init_request(int listen_socket, void(*on_accept)(), void(*on_
 	req->hook.on_read = on_read ? on_read : fcgi_hook_dummy;
 	req->hook.on_close = on_close ? on_close : fcgi_hook_dummy;
 
-#ifdef _WIN32
-	req->tcp = !GetNamedPipeInfo((HANDLE)_get_osfhandle(req->listen_socket), NULL, NULL, NULL, NULL);
-#endif
-
 	fcgi_hash_init(&req->env);
 
 	return req;
@@ -1092,11 +1088,7 @@ static int fcgi_read_request(fcgi_request *req)
 		req->keep = (b->flags & FCGI_KEEP_CONN);
 #ifdef TCP_NODELAY
 		if (req->keep && req->tcp && !req->nodelay) {
-# ifdef _WIN32
-			BOOL on = 1;
-# else
 			int on = 1;
-# endif
 
 			setsockopt(req->fd, IPPROTO_TCP, TCP_NODELAY, (char*)&on, sizeof(on));
 			req->nodelay = 1;
@@ -1269,32 +1261,8 @@ void fcgi_close(fcgi_request *req, int force, int destroy)
 		req->has_env = 0;
 	}
 
-#ifdef _WIN32
-	if (is_impersonate && !req->tcp) {
-		RevertToSelf();
-	}
-#endif
 
 	if ((force || !req->keep) && req->fd >= 0) {
-#ifdef _WIN32
-		if (!req->tcp) {
-			HANDLE pipe = (HANDLE)_get_osfhandle(req->fd);
-
-			if (!force) {
-				FlushFileBuffers(pipe);
-			}
-			DisconnectNamedPipe(pipe);
-		} else {
-			if (!force) {
-				char buf[8];
-
-				shutdown(req->fd, 1);
-				/* read any remaining data, it may be omitted */
-				while (recv(req->fd, buf, sizeof(buf), 0) > 0) {}
-			}
-			closesocket(req->fd);
-		}
-#else
 		if (!force) {
 			char buf[8];
 
@@ -1303,7 +1271,6 @@ void fcgi_close(fcgi_request *req, int force, int destroy)
 			while (recv(req->fd, buf, sizeof(buf), 0) > 0) {}
 		}
 		close(req->fd);
-#endif
 #ifdef TCP_NODELAY
 		req->nodelay = 0;
 #endif
@@ -1318,6 +1285,8 @@ int fcgi_is_closed(fcgi_request *req)
 	return (req->fd < 0);
 }
 
+// 判断是否可以允许链接
+// 知道tcp socket有这个功能，如果设置过allowed_clients，需要进行判断
 static int fcgi_is_allowed() {
 	int i;
 
@@ -1358,50 +1327,24 @@ static int fcgi_is_allowed() {
 
 int fcgi_accept_request(fcgi_request *req)
 {
-#ifdef _WIN32
-	HANDLE pipe;
-	OVERLAPPED ov;
-#endif
 
 	while (1) {
+        // 这里进行多次判断
 		if (req->fd < 0) {
 			while (1) {
 				if (in_shutdown) {
 					return -1;
 				}
-#ifdef _WIN32
-				if (!req->tcp) {
-					pipe = (HANDLE)_get_osfhandle(req->listen_socket);
-					FCGI_LOCK(req->listen_socket);
-					ov.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-					if (!ConnectNamedPipe(pipe, &ov)) {
-						errno = GetLastError();
-						if (errno == ERROR_IO_PENDING) {
-							while (WaitForSingleObject(ov.hEvent, 1000) == WAIT_TIMEOUT) {
-								if (in_shutdown) {
-									CloseHandle(ov.hEvent);
-									FCGI_UNLOCK(req->listen_socket);
-									return -1;
-								}
-							}
-						} else if (errno != ERROR_PIPE_CONNECTED) {
-						}
-					}
-					CloseHandle(ov.hEvent);
-					req->fd = req->listen_socket;
-					FCGI_UNLOCK(req->listen_socket);
-				} else {
-					SOCKET listen_socket = (SOCKET)_get_osfhandle(req->listen_socket);
-#else
 				{
 					int listen_socket = req->listen_socket;
-#endif
 					sa_t sa;
 					socklen_t len = sizeof(sa);
 
 					req->hook.on_accept();
 
+                    // 记录锁，只允许单个子进程接受请求
 					FCGI_LOCK(req->listen_socket);
+                    // accept函数是阻塞的
 					req->fd = accept(listen_socket, (struct sockaddr *)&sa, &len);
 					FCGI_UNLOCK(req->listen_socket);
 
@@ -1414,17 +1357,10 @@ int fcgi_accept_request(fcgi_request *req)
 					}
 				}
 
-#ifdef _WIN32
-				if (req->fd < 0 && (in_shutdown || errno != EINTR)) {
-#else
 				if (req->fd < 0 && (in_shutdown || (errno != EINTR && errno != ECONNABORTED))) {
-#endif
 					return -1;
 				}
 
-#ifdef _WIN32
-				break;
-#else
 				if (req->fd >= 0) {
 #if defined(HAVE_SYS_POLL_H) && defined(HAVE_POLL)
 					struct pollfd fds;
@@ -1462,26 +1398,17 @@ int fcgi_accept_request(fcgi_request *req)
 						}
 						fcgi_close(req, 1, 0);
 					} else {
+                        // select 函数最大允许1024个链接
 						fcgi_log(FCGI_ERROR, "Too many open file descriptors. FD_SETSIZE limit exceeded.");
 						fcgi_close(req, 1, 0);
 					}
 #endif
 				}
-#endif
 			}
 		} else if (in_shutdown) {
 			return -1;
 		}
 		if (fcgi_read_request(req)) {
-#ifdef _WIN32
-			if (is_impersonate && !req->tcp) {
-				pipe = (HANDLE)_get_osfhandle(req->fd);
-				if (!ImpersonateNamedPipeClient(pipe)) {
-					fcgi_close(req, 1, 1);
-					continue;
-				}
-			}
-#endif
 			return req->fd;
 		} else {
 			fcgi_close(req, 1, 1);

@@ -286,3 +286,5 @@ win32/ext
 win32/phpts.def
 win32/wsyslog.h
 tags
+pear/install-pear-nozlib.phar
+php5.spec
