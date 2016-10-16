@@ -2384,10 +2384,6 @@ void php_module_shutdown(void)
 	ts_free_worker_threads();
 #endif
 
-#ifdef PHP_WIN32
-	php_win32_free_rng_lock();
-#endif
-
 	sapi_flush();
 
 	zend_shutdown();
@@ -2423,11 +2419,6 @@ void php_module_shutdown(void)
 	ts_free_id(core_globals_id);
 #endif
 
-#ifdef PHP_WIN32
-	if (old_invalid_parameter_handler == NULL) {
-		_set_invalid_parameter_handler(old_invalid_parameter_handler);
-	}
-#endif
 }
 /* }}} */
 

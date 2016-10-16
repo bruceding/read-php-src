@@ -486,6 +486,7 @@ int fpm_unix_init_main() /* {{{ */
 		fd_set rfds;
 		int ret;
 
+        // 通过管道通信
 		if (pipe(fpm_globals.send_config_pipe) == -1) {
 			zlog(ZLOG_SYSERROR, "failed to create pipe");
 			return -1;
@@ -518,6 +519,7 @@ int fpm_unix_init_main() /* {{{ */
 				tv.tv_usec = 0;
 
 				zlog(ZLOG_DEBUG, "The calling process is waiting for the master process to ping via fd=%d", fpm_globals.send_config_pipe[0]);
+                // select 起到计时器作用
 				ret = select(fpm_globals.send_config_pipe[0] + 1, &rfds, NULL, NULL, &tv);
 				if (ret == -1) {
 					zlog(ZLOG_SYSERROR, "failed to select");

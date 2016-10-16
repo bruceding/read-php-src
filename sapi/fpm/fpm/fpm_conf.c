@@ -1210,6 +1210,7 @@ static int fpm_conf_post_process(int force_daemon) /* {{{ */
 		return -1;
 	}
 
+    // worke相关配置检查
 	if (0 > fpm_conf_process_all_pools()) {
 		return -1;
 	}
@@ -1698,6 +1699,7 @@ int fpm_conf_init_main(int test_conf, int force_daemon) /* {{{ */
 		}
 	}
 
+    // 加载php-fpm.conf配置,包括include配置
 	ret = fpm_conf_load_ini_file(fpm_globals.config);
 
 	if (0 > ret) {
@@ -1719,6 +1721,7 @@ int fpm_conf_init_main(int test_conf, int force_daemon) /* {{{ */
 		return -1;
 	}
 
+    //配置清理
 	if (0 > fpm_cleanup_add(FPM_CLEANUP_ALL, fpm_conf_cleanup, 0)) {
 		return -1;
 	}

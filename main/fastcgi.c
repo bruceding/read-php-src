@@ -479,56 +479,12 @@ void __attribute__((weak)) fcgi_log(int type, const char *format, ...) {
 int fcgi_init(void)
 {
 	if (!is_initialized) {
-#ifndef _WIN32
 		sa_t sa;
 		socklen_t len = sizeof(sa);
-#endif
 		zend_hash_init(&fcgi_mgmt_vars, 8, NULL, fcgi_free_mgmt_var_cb, 1);
 		fcgi_set_mgmt_var("FCGI_MPXS_CONNS", sizeof("FCGI_MPXS_CONNS")-1, "0", sizeof("0")-1);
 
 		is_initialized = 1;
-#ifdef _WIN32
-# if 0
-		/* TODO: Support for TCP sockets */
-		WSADATA wsaData;
-
-		if (WSAStartup(MAKEWORD(2,0), &wsaData)) {
-			fprintf(stderr, "Error starting Windows Sockets.  Error: %d", WSAGetLastError());
-			return 0;
-		}
-# endif
-		if ((GetStdHandle(STD_OUTPUT_HANDLE) == INVALID_HANDLE_VALUE) &&
-		    (GetStdHandle(STD_ERROR_HANDLE)  == INVALID_HANDLE_VALUE) &&
-		    (GetStdHandle(STD_INPUT_HANDLE)  != INVALID_HANDLE_VALUE)) {
-			char *str;
-			DWORD pipe_mode = PIPE_READMODE_BYTE | PIPE_WAIT;
-			HANDLE pipe = GetStdHandle(STD_INPUT_HANDLE);
-
-			SetNamedPipeHandleState(pipe, &pipe_mode, NULL, NULL);
-
-			str = getenv("_FCGI_SHUTDOWN_EVENT_");
-			if (str != NULL) {
-				zend_long ev;
-				HANDLE shutdown_event;
-
-				ZEND_ATOL(ev, str);
-				shutdown_event = (HANDLE) ev;
-				if (!CreateThread(NULL, 0, fcgi_shutdown_thread,
-				                  shutdown_event, 0, NULL)) {
-					return -1;
-				}
-			}
-			str = getenv("_FCGI_MUTEX_");
-			if (str != NULL) {
-				zend_long mt;
-				ZEND_ATOL(mt, str);
-				fcgi_accept_mutex = (HANDLE) mt;
-			}
-			return is_fastcgi = 1;
-		} else {
-			return is_fastcgi = 0;
-		}
-#else
 		errno = 0;
 		if (getpeername(0, (struct sockaddr *)&sa, &len) != 0 && errno == ENOTCONN) {
 			fcgi_setup_signals();
@@ -536,7 +492,6 @@ int fcgi_init(void)
 		} else {
 			return is_fastcgi = 0;
 		}
-#endif
 	}
 	return is_fastcgi;
 }

@@ -15,6 +15,7 @@ struct cleanup_s {
 	void *arg;
 };
 
+// 实现了数组的功能，add or remove
 static struct fpm_array_s cleanups = { .sz = sizeof(struct cleanup_s) };
 
 int fpm_cleanup_add(int type, void (*cleanup)(int, void *), void *arg) /* {{{ */
