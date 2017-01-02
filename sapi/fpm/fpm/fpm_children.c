@@ -388,6 +388,7 @@ int fpm_children_make(struct fpm_worker_pool_s *wp, int in_event_loop, int nb_to
 	 *   - (fpm_global_config.process_max < 1 || fpm_globals.running_children < fpm_global_config.process_max):
 	 *     if fpm_global_config.process_max is set, FPM has not fork this number of processes (globaly)
 	 */
+    // 生成子进程
 	while (fpm_pctl_can_spawn_children() && wp->running_children < max && (fpm_global_config.process_max < 1 || fpm_globals.running_children < fpm_global_config.process_max)) {
 
 		warned = 0;

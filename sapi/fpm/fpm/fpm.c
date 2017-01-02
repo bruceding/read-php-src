@@ -60,10 +60,10 @@ int fpm_init(int argc, char **argv, char *config, char *prefix, char *pid, int t
 	    0 > fpm_stdio_init_main()         || // 标准输入输出写入到/dev/null
 	    0 > fpm_conf_init_main(test_conf, force_daemon) || // 加载检查配置文件,校验配置值
 	    0 > fpm_unix_init_main()          || //主要处理是否在后台运行逻辑
-	    0 > fpm_scoreboard_init_main()    ||
-	    0 > fpm_pctl_init_main()          ||
+	    0 > fpm_scoreboard_init_main()    || // 分配共享空间，管理worker进程，记录worker状态
+	    0 > fpm_pctl_init_main()          || // copy argv，并做好释放操作
 	    0 > fpm_env_init_main()           ||
-	    0 > fpm_signals_init_main()       ||
+	    0 > fpm_signals_init_main()       || // 设置信号
 	    0 > fpm_children_init_main()      ||
 	    0 > fpm_sockets_init_main()       ||
 	    0 > fpm_worker_pool_init_main()   ||
