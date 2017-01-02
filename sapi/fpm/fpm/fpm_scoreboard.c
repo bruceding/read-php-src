@@ -57,6 +57,7 @@ int fpm_scoreboard_init_main() /* {{{ */
 
 		scoreboard_size        = sizeof(struct fpm_scoreboard_s) + (wp->config->pm_max_children) * sizeof(struct fpm_scoreboard_proc_s *);
 		scoreboard_nprocs_size = sizeof(struct fpm_scoreboard_proc_s) * wp->config->pm_max_children;
+        // 分配共享空间,管理worker进程
 		shm_mem                = fpm_shm_alloc(scoreboard_size + scoreboard_nprocs_size);
 
 		if (!shm_mem) {

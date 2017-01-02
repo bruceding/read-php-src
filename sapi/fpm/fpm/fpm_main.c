@@ -1828,7 +1828,6 @@ int main(int argc, char *argv[])
 	}
 
     // 这已经是fork出来的子进程了，通知父进程可以退出了
-    // TODO
 	if (fpm_globals.send_config_pipe[1]) {
 		int writeval = 1;
 		zlog(ZLOG_DEBUG, "Sending \"1\" (OK) to parent via fd=%d", fpm_globals.send_config_pipe[1]);
@@ -1837,6 +1836,7 @@ int main(int argc, char *argv[])
 	}
 	fpm_is_running = 1;
 
+    // TODO
 	fcgi_fd = fpm_run(&max_requests);
 	parent = 0;
 
