@@ -1,8 +1,8 @@
 /*
   +----------------------------------------------------------------------+
-  | PHP Version 5                                                        |
+  | PHP Version 7                                                        |
   +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2015 The PHP Group                                |
+  | Copyright (c) 1997-2016 The PHP Group                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -43,23 +43,24 @@
 #define MYSQLI_ZEND_ARG_OBJ_INFO_STMT() ZEND_ARG_INFO(0, stmt)
 #endif
 
-ZEND_BEGIN_ARG_INFO(arginfo_mysqli_stmt_bind_result, 1)
+ZEND_BEGIN_ARG_INFO(arginfo_mysqli_stmt_bind_result, 0)
 	MYSQLI_ZEND_ARG_OBJ_INFO_STMT()
+	ZEND_ARG_VARIADIC_INFO(1, vars)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO(arginfo_mysqli_stmt_bind_param, 1)
+ZEND_BEGIN_ARG_INFO(arginfo_mysqli_stmt_bind_param, 0)
 	MYSQLI_ZEND_ARG_OBJ_INFO_STMT()
 	ZEND_ARG_INFO(0, types)
+	ZEND_ARG_VARIADIC_INFO(1, vars)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO(arginfo_class_mysqli_stmt_bind_result, 1)
+ZEND_BEGIN_ARG_INFO(arginfo_class_mysqli_stmt_bind_result, 0)
+	ZEND_ARG_VARIADIC_INFO(1, vars)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO(arginfo_class_mysqli_stmt_bind_param, 1)
+ZEND_BEGIN_ARG_INFO(arginfo_class_mysqli_stmt_bind_param, 0)
 	ZEND_ARG_INFO(0, types)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO(all_args_force_by_ref, 1)
+	ZEND_ARG_VARIADIC_INFO(1, vars)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_mysqli_poll, 0, 0, 4)
@@ -136,6 +137,17 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_class_mysqli_rollback, 0, 0, 0)
 	ZEND_ARG_INFO(0, flags)
 	ZEND_ARG_INFO(0, name)
 ZEND_END_ARG_INFO()
+
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_mysqli_store_result, 0, 0, 1)
+	MYSQLI_ZEND_ARG_OBJ_INFO_LINK()
+	ZEND_ARG_INFO(0, flags)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_store_result, 0, 0, 0)
+	ZEND_ARG_INFO(0, flags)
+ZEND_END_ARG_INFO()
+
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_mysqli_change_user, 0, 0, 4)
 	MYSQLI_ZEND_ARG_OBJ_INFO_LINK()
@@ -227,18 +239,14 @@ ZEND_END_ARG_INFO()
 
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_mysqli_fetch_object, 0, 0, 1)
-#if PHP_VERSION_ID > 50399
 	MYSQLI_ZEND_ARG_OBJ_INFO_RESULT()
 	ZEND_ARG_INFO(0, class_name)
 	ZEND_ARG_ARRAY_INFO(0, params, 0)
-#endif
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_mysqli_fetch_object, 0, 0, 0)
-#if PHP_VERSION_ID > 50399
 	ZEND_ARG_INFO(0, class_name)
 	ZEND_ARG_ARRAY_INFO(0, params, 0)
-#endif
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_mysqli_kill, 0, 0, 2)
@@ -368,6 +376,9 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_class_mysqli_refresh, 0, 0, 1)
 	ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_mysqli_no_options, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 
 /* {{{ mysqli_functions[]
  *
@@ -420,6 +431,7 @@ const zend_function_entry mysqli_functions[] = {
 #endif
 	PHP_FE(mysqli_get_client_info,						arginfo_mysqli_only_link)
 	PHP_FE(mysqli_get_client_version,					arginfo_mysqli_only_link)
+	PHP_FE(mysqli_get_links_stats,						arginfo_mysqli_no_options)
 	PHP_FE(mysqli_get_host_info,						arginfo_mysqli_only_link)
 	PHP_FE(mysqli_get_proto_info,						arginfo_mysqli_only_link)
 	PHP_FE(mysqli_get_server_info,						arginfo_mysqli_only_link)
@@ -489,7 +501,7 @@ const zend_function_entry mysqli_functions[] = {
 	PHP_FE(mysqli_sqlstate,   							arginfo_mysqli_only_link)
 	PHP_FE(mysqli_ssl_set,								arginfo_mysqli_ssl_set)
 	PHP_FE(mysqli_stat,									arginfo_mysqli_only_link)
-	PHP_FE(mysqli_store_result,							arginfo_mysqli_only_link)
+	PHP_FE(mysqli_store_result,							arginfo_mysqli_store_result)
 	PHP_FE(mysqli_thread_id,							arginfo_mysqli_only_link)
 	PHP_FE(mysqli_thread_safe,							arginfo_mysqli_no_params)
 	PHP_FE(mysqli_use_result,							arginfo_mysqli_only_link)
@@ -528,10 +540,10 @@ const zend_function_entry mysqli_link_methods[] = {
 #endif
 	PHP_FALIAS(get_server_info, mysqli_get_server_info, arginfo_mysqli_no_params)
 	PHP_FALIAS(get_warnings, mysqli_get_warnings, arginfo_mysqli_no_params)
-	PHP_FALIAS(init,mysqli_init, arginfo_mysqli_no_params)
+	PHP_FALIAS(init,mysqli_init_method, arginfo_mysqli_no_params)
 	PHP_FALIAS(kill,mysqli_kill, arginfo_class_mysqli_kill)
 	PHP_FALIAS(multi_query, mysqli_multi_query, arginfo_class_mysqli_query)
-	PHP_FALIAS(mysqli, mysqli_link_construct, arginfo_mysqli_connect)
+	PHP_FALIAS(__construct, mysqli_link_construct, arginfo_mysqli_connect)
 	PHP_FALIAS(more_results, mysqli_more_results, arginfo_mysqli_no_params)
 	PHP_FALIAS(next_result, mysqli_next_result, arginfo_mysqli_no_params)
 	PHP_FALIAS(options, mysqli_options, arginfo_class_mysqli_options)
@@ -559,11 +571,11 @@ const zend_function_entry mysqli_link_methods[] = {
 	PHP_FALIAS(ssl_set, mysqli_ssl_set, arginfo_class_mysqli_ssl_set)
 	PHP_FALIAS(stat, mysqli_stat, arginfo_mysqli_no_params)
 	PHP_FALIAS(stmt_init, mysqli_stmt_init, arginfo_mysqli_no_params)
-	PHP_FALIAS(store_result, mysqli_store_result, arginfo_mysqli_no_params)
+	PHP_FALIAS(store_result, mysqli_store_result, arginfo_class_store_result)
 	PHP_FALIAS(thread_safe, mysqli_thread_safe, arginfo_mysqli_no_params)
 	PHP_FALIAS(use_result, mysqli_use_result, arginfo_mysqli_no_params)
 	PHP_FALIAS(refresh,mysqli_refresh, arginfo_class_mysqli_refresh)
-	{NULL, NULL, NULL}
+	PHP_FE_END
 };
 /* }}} */
 
@@ -588,7 +600,7 @@ const zend_function_entry mysqli_result_methods[] = {
 	PHP_FALIAS(fetch_row, mysqli_fetch_row, arginfo_mysqli_no_params)
 	PHP_FALIAS(field_seek, mysqli_field_seek, arginfo_class_mysqli_result_and_fieldnr)
 	PHP_FALIAS(free_result, mysqli_free_result, arginfo_mysqli_no_params)
-	{NULL, NULL, NULL}
+	PHP_FE_END
 };
 /* }}} */
 
@@ -621,7 +633,7 @@ const zend_function_entry mysqli_stmt_methods[] = {
 #if defined(MYSQLI_USE_MYSQLND)
 	PHP_FALIAS(get_result, mysqli_stmt_get_result, arginfo_mysqli_no_params)
 #endif
-	{NULL, NULL, NULL}
+	PHP_FE_END
 };
 /* }}} */
 

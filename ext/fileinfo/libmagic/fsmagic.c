@@ -32,7 +32,7 @@
 #include "file.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$File: fsmagic.c,v 1.67 2013/03/17 15:43:20 christos Exp $")
+FILE_RCSID("@(#)$File: fsmagic.c,v 1.74 2014/10/13 20:21:49 christos Exp $")
 #endif	/* lint */
 
 #include "magic.h"
@@ -53,7 +53,11 @@ FILE_RCSID("@(#)$File: fsmagic.c,v 1.67 2013/03/17 15:43:20 christos Exp $")
 #ifdef major			/* Might be defined in sys/types.h.  */
 # define HAVE_MAJOR
 #endif
-  
+#ifdef WIN32
+# define WIN32_LEAN_AND_MEAN
+# include <windows.h>
+#endif
+
 #ifndef HAVE_MAJOR
 # define major(dev)  (((dev) >> 8) & 0xff)
 # define minor(dev)  ((dev) & 0xff)
@@ -90,11 +94,10 @@ handle_mime(struct magic_set *ms, int mime, const char *str)
 }
 
 protected int
-file_fsmagic(struct magic_set *ms, const char *fn, struct stat *sb, php_stream *stream)
+file_fsmagic(struct magic_set *ms, const char *fn, zend_stat_t *sb, php_stream *stream)
 {
 	int ret, did = 0;
 	int mime = ms->flags & MAGIC_MIME;
-	TSRMLS_FETCH();
 
 	if (ms->flags & MAGIC_APPLE)
 		return 0;
@@ -112,7 +115,7 @@ file_fsmagic(struct magic_set *ms, const char *fn, struct stat *sb, php_stream *
 				file_error(ms, errno, "cannot stat `%s'", fn);
 				return -1;
 			}
-			return 1;
+			return 0;
 		}
 		memcpy(sb, &ssb.sb, sizeof(struct stat));
 	} else {
@@ -121,14 +124,14 @@ file_fsmagic(struct magic_set *ms, const char *fn, struct stat *sb, php_stream *
 				file_error(ms, errno, "cannot stat `%s'", fn);
 				return -1;
 			}
-			return 1;
+			return 0;
 		}
 	}
 
 	ret = 1;
 	if (!mime) {
 #ifdef S_ISUID
-		if (sb->st_mode & S_ISUID) 
+		if (sb->st_mode & S_ISUID)
 			if (file_printf(ms, "%ssetuid", COMMA) == -1)
 				return -1;
 #endif
@@ -148,7 +151,7 @@ file_fsmagic(struct magic_set *ms, const char *fn, struct stat *sb, php_stream *
 #ifndef PHP_WIN32
 # ifdef S_IFCHR
 		case S_IFCHR:
-			/* 
+			/*
 			 * If -s has been specified, treat character special files
 			 * like ordinary files.  Otherwise, just report that they
 			 * are block special files and go on to the next file.
@@ -158,26 +161,26 @@ file_fsmagic(struct magic_set *ms, const char *fn, struct stat *sb, php_stream *
 				break;
 			}
 			if (mime) {
-				if (handle_mime(ms, mime, "x-character-device") == -1)
+				if (handle_mime(ms, mime, "chardevice") == -1)
 					return -1;
 			} else {
 #  ifdef HAVE_STAT_ST_RDEV
 #   ifdef dv_unit
 			if (file_printf(ms, "%scharacter special (%d/%d/%d)",
 			    COMMA, major(sb->st_rdev), dv_unit(sb->st_rdev),
-						dv_subunit(sb->st_rdev)) == -1)
-					return -1;
-#   else
+					dv_subunit(sb->st_rdev)) == -1)
+				return -1;
+# else
 			if (file_printf(ms, "%scharacter special (%ld/%ld)",
 			    COMMA, (long)major(sb->st_rdev),
 			    (long)minor(sb->st_rdev)) == -1)
-					return -1;
-#   endif
-#  else
+				return -1;
+# endif
+#else
 			if (file_printf(ms, "%scharacter special", COMMA) == -1)
-					return -1;
-#  endif
-			}
+				return -1;
+#endif
+	}
 			return 1;
 # endif
 #endif
@@ -223,13 +226,13 @@ file_fsmagic(struct magic_set *ms, const char *fn, struct stat *sb, php_stream *
 		break;
 #endif
 #endif
-		case S_IFREG:
-	/*
-	 * regular file, check next possibility
-	 *
-	 * If stat() tells us the file has zero length, report here that
-	 * the file is empty, so we can skip all the work of opening and 
-	 * reading the file.
+	case S_IFREG:
+		/*
+		 * regular file, check next possibility
+		 *
+		 * If stat() tells us the file has zero length, report here that
+		 * the file is empty, so we can skip all the work of opening and
+		 * reading the file.
 		 * But if the -s option has been given, we skip this
 		 * optimization, since on some systems, stat() reports zero
 		 * size for raw disk partitions. (If the block special device

@@ -74,12 +74,11 @@ error (const char *format,...)
 {
 	va_list args;
 	char *tmp;
-	TSRMLS_FETCH();
 
 	va_start(args, format);
 	vspprintf(&tmp, 0, format, args);
 	va_end(args);
-	php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s: %s", LIBNAME, tmp);
+	php_error_docref(NULL, E_WARNING, "%s: %s", LIBNAME, tmp);
 	efree(tmp);
 }
 
@@ -330,7 +329,7 @@ han2zen (int *p1, int *p2)
     {
       if ((*p2 >= 74 && *p2 <= 103) || (*p2 >= 110 && *p2 <= 122))
 	(*p2)++;
-      else if (*p2 == 131 && *p2 == 69)
+      else if (*p2 == 131 || *p2 == 69)
 	*p2 = 148;
     }
   else if (handaku && *p2 >= 110 && *p2 <= 122)

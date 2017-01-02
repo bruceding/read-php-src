@@ -1,7 +1,9 @@
 
 #include <php_compat.h>
 
-#ifndef PHP_WIN32
+#ifdef PHP_WIN32
+# include <config.w32.h>
+#else
 # include <php_config.h>
 #endif
 
@@ -234,8 +236,8 @@ them both to 0; an emulation function will be used. */
 #define LINK_SIZE 2
 #endif
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
+/* This is ignored unless you are using libtool. */
 #ifndef LT_OBJDIR
 #define LT_OBJDIR ".libs/"
 #endif
@@ -314,7 +316,7 @@ them both to 0; an emulation function will be used. */
 #define PACKAGE_NAME "PCRE"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "PCRE 8.36"
+#define PACKAGE_STRING "PCRE 8.38"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "pcre"
@@ -323,7 +325,7 @@ them both to 0; an emulation function will be used. */
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "8.36"
+#define PACKAGE_VERSION "8.38"
 
 /* to make a symbol visible */
 /* #undef PCRECPP_EXP_DECL */
@@ -397,7 +399,9 @@ them both to 0; an emulation function will be used. */
 #undef SUPPORT_GCOV
 
 /* Define to any value to enable support for Just-In-Time compiling. */
-#undef SUPPORT_JIT
+#if HAVE_PCRE_JIT_SUPPORT
+#define SUPPORT_JIT
+#endif
 
 /* Define to any value to allow pcregrep to be linked with libbz2, so that it
    is able to handle .bz2 files. */
@@ -439,7 +443,7 @@ them both to 0; an emulation function will be used. */
 
 /* Version number of package */
 #ifndef VERSION
-#define VERSION "8.36"
+#define VERSION "8.38"
 #endif
 
 /* Define to empty if `const' does not conform to ANSI C. */
@@ -451,4 +455,3 @@ them both to 0; an emulation function will be used. */
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 /* #undef size_t */
-

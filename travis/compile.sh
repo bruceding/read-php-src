@@ -10,18 +10,20 @@ else
 	DEBUG="";
 fi
 ./buildconf --force
-./configure --quiet \
+./configure \
+--prefix=$HOME"/php-install" \
+--quiet \
 $DEBUG \
 $TS \
+--enable-phpdbg \
 --enable-fpm \
 --with-pdo-mysql=mysqlnd \
---with-mysql=mysqlnd \
 --with-mysqli=mysqlnd \
 --with-pgsql \
 --with-pdo-pgsql \
 --with-pdo-sqlite \
 --enable-intl \
---with-pear \
+--without-pear \
 --with-gd \
 --with-jpeg-dir=/usr \
 --with-png-dir=/usr \
@@ -48,6 +50,15 @@ $TS \
 --with-bz2 \
 --with-openssl \
 --with-gmp \
---enable-bcmath
+--enable-bcmath \
+--enable-calendar \
+--enable-ftp \
+--with-pspell=/usr \
+--with-enchant=/usr \
+--enable-wddx \
+--with-freetype-dir=/usr \
+--with-xpm-dir=/usr \
+--with-kerberos \
+--enable-sysvmsg 
 make -j2 --quiet
-sudo make install
+make install

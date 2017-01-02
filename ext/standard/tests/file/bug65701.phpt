@@ -6,7 +6,9 @@ Boro Sitnikovski <buritomath@yahoo.com>
 <?php
 $file_path = dirname(__FILE__) . "/bug65701/";
 
-mkdir($file_path);
+if (!is_dir($file_path)) {
+	mkdir($file_path);
+}
 
 $src = $file_path . '/srcbug65701_file.txt';
 $dst = tempnam($file_path, 'dstbug65701_file.txt');
@@ -20,7 +22,7 @@ var_dump(filesize($dst));
 <?php
 $file_path = dirname(__FILE__) . "/bug65701/";
 foreach (scandir($file_path) as $file) {
-    if (strpos($file, "bug65701") !== false) {
+    if (strpos($file, "bug65701") !== false || 'WIN' == substr(PHP_OS, 0, 3)) {
         unlink($file_path . $file);
     }
 }

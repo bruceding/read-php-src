@@ -26,7 +26,7 @@
                 Computer Science Department, 9062
                 Western Washington University
                 Bellingham, WA 98226-9062
-       
+
 *************************************************************************/
 
 #include <config.h>
@@ -41,6 +41,5 @@
 
 void bc_out_of_memory (void)
 {
-  (void) fprintf (stderr, "bcmath: out of memory!\n");
-  exit (1);
+  zend_error(E_ERROR, "bcmath: out of memory!");
 }

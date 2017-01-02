@@ -26,7 +26,7 @@
                 Computer Science Department, 9062
                 Western Washington University
                 Bellingham, WA 98226-9062
-       
+
 *************************************************************************/
 
 #include <config.h>
@@ -49,7 +49,10 @@ _bc_new_num_ex (length, scale, persistent)
      int length, scale, persistent;
 {
   bc_num temp;
-
+  /* PHP Change:  add length check */
+  if ((size_t)length+(size_t)scale > INT_MAX) {
+   zend_error(E_ERROR, "Result too long, max is %d", INT_MAX);
+  }
   /* PHP Change:  malloc() -> pemalloc(), removed free_list code */
   temp = (bc_num) safe_pemalloc (1, sizeof(bc_struct)+length, scale, persistent);
 #if 0
@@ -101,7 +104,7 @@ _bc_free_num_ex (num, persistent)
 /* Intitialize the number package! */
 
 void
-bc_init_numbers (TSRMLS_D)
+bc_init_numbers (void)
 {
   BCG(_zero_) = _bc_new_num_ex (1,0,1);
   BCG(_one_)  = _bc_new_num_ex (1,0,1);
@@ -124,7 +127,7 @@ bc_copy_num (bc_num num)
 /* Initialize a number NUM by making it a copy of zero. */
 
 void
-bc_init_num (bc_num *num TSRMLS_DC)
+bc_init_num (bc_num *num)
 {
   *num = bc_copy_num (BCG(_zero_));
 }

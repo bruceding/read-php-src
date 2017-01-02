@@ -40,7 +40,7 @@ do {
 	}
 	if ($handler != 'cdb') {
 		$db_writer = dba_open($db_filename, 'c'.$lock_flag, $handler);
-		if (($dba_reader = @dba_open($db_filename, 'r'.$lock_flag.($lock_flag ? 't' : ''), $handler))===false) {
+		if (($dba_reader = @dba_open($db_filename, 'r'.$lock_flag.'t', $handler))===false) {
 			echo "Read during write: not allowed\n";
 		} else {
 			echo "Read during write: allowed\n";
@@ -82,7 +82,7 @@ do {
 		dba_close($dba_reader);
 	}
 	if (($db_file = dba_popen($db_filename, 'r'.($lock_flag==''?'':'-'), $handler))!==FALSE) {
-		if ($handler == 'dbm') {
+		if ($handler == 'dbm' || $handler == "tcadb") {
 			dba_close($db_file);
 		}
 	}
